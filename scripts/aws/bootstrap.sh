@@ -2,9 +2,11 @@
 
 CLUSTER_NAME="samyd-ornikar-prod"
 
+SCRIPT_PATH=$(dirname "$0")
+
 # Run setup_kubectl.sh
 echo "🔥 Running setup_kubectl.sh..."
-./setup_kubectl.sh
+"$SCRIPT_PATH"/setup_kubectl.sh
 
 # Install Traefik
 echo "🏗 Installing Traefik..."

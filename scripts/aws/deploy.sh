@@ -24,6 +24,6 @@ for chart in "$SCRIPT_PATH"/../../charts/*; do
 
   # Install or upgrade the chart
   echo "🏗 Installing or upgrading $chart_name chart..."
-  helm upgrade --install "$chart_name" "$chart" --set image.repository "$IMAGE_REPOSITORY" --set image.tag="$VERSION_NUMBER"
+  helm upgrade --install "$chart_name" "$chart" --set image.repository="$IMAGE_REPOSITORY" --set image.tag="$VERSION_NUMBER"
   echo "✅ $chart_name chart is installed or upgraded."
 done

@@ -9,6 +9,7 @@ echo "🔍 Getting current AWS account ID..."
 ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
 echo "✅ Current AWS account ID is $ACCOUNT_ID"
 
+# Get the Docker image tag prefix that we will use to push to AWS ECR
 ECR_REGISTRY="$ACCOUNT_ID.dkr.ecr.eu-west-3.amazonaws.com"
 IMAGE_TAG_PREFIX="$ECR_REGISTRY/$REPO_PREFIX"
 
