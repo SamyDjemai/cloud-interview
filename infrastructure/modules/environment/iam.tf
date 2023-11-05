@@ -146,7 +146,7 @@ resource "aws_iam_role" "eks_cluster_autoscaler" {
           "Action" : "sts:AssumeRoleWithWebIdentity",
           "Condition" : {
             "StringEquals" : {
-              "${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}:sub" : "system:serviceaccount:kube-system:cluster-autoscaler",
+              "${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}:sub" : "system:serviceaccount:kube-system:cluster-autoscaler-aws-cluster-autoscaler",
               "${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}:aud" : "sts.amazonaws.com"
             }
           }
