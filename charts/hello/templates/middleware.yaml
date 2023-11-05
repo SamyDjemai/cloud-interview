@@ -1,0 +1,17 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "hello.fullname" . }}-strip-prefix
+  labels:
+    {{- include "hello.labels" . | nindent 4 }}
+spec:
+  stripPrefix:
+    prefixes:
+      {{- range .Values.ingress.hosts }}
+      {{- range .paths }}
+      - {{ .path }}
+      {{- end }}
+      {{- end }}
+    forceSlash: false
+{{- end }}

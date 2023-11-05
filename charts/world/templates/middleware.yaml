@@ -1,0 +1,15 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "world.fullname" . }}-strip-prefix
+  labels:
+    {{- include "world.labels" . | nindent 4 }}
+spec:
+  stripPrefix:
+    prefixes:
+      {{- range .Values.ingress.hosts }}
+      {{- range .paths }}
+      - {{ .path }}
+      {{- end }}
+      {{- end }}
+    forceSlash: false

@@ -1,0 +1,67 @@
+{{- range .Values.configs.volumes }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "world.fullname" $ }}-{{ .name }}
+  labels:
+{{ include "world.labels" $ | indent 4 }}
+data:
+  {{- range $key, $value := .files }}
+  {{ $key }}: |
+{{ $value | indent 4 }}
+  {{- end }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "world.fullname" . }}-nginx-server
+  labels:
+{{ include "world.labels" . | indent 4 }}
+data:
+  nginx.conf: |
+    server {
+      listen {{ .Values.service.port }} default_server;
+      server_name _;
+
+      root {{ .Values.rootPath }};
+      index index.php;
+
+      location / {
+        try_files $uri $uri/ /index.php?$args;
+      }
+
+      location ~ \.php$ {
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param   PATH_INFO       $fastcgi_path_info;
+        fastcgi_param   SCRIPT_FILENAME $document_root$fastcgi_script_name;
+      }
+
+      {{- if .Values.nginx.livenessProbe.enabled }}
+      location = /nginx_status {
+        stub_status;
+        allow 127.0.0.1;
+        allow {{ .Values.nginx.livenessProbe.allowIPRange }};
+        deny all;
+      }
+      {{- end }}
+    }
+
+{{- range .Values.nginx.configs.volumes }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "world.fullname" $ }}-{{ .name }}
+  labels:
+{{ include "world.labels" $ | indent 4 }}
+data:
+  {{- range $key, $value := .files }}
+  {{ $key }}: |
+{{ $value | indent 4 }}
+  {{- end }}
+{{- end }}

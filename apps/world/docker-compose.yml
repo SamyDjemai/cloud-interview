@@ -1,0 +1,21 @@
+version: "3"
+
+services:
+  php:
+    build:
+      target: dev
+    restart: unless-stopped
+    volumes:
+      - ./public:/app/public
+      - ./vendor:/app/vendor
+    environment:
+      - PHP_OPCACHE_MEMORY_CONSUMPTION=128
+      - PHP_OPCACHE_MAX_ACCELERATED_FILES=4000
+      - PHP_MEMORY_LIMIT=256M
+      - PHP_TZ=Europe/Paris
+  nginx:
+    image: nginx:1.25-alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/nginx.conf
+    ports:
+      - 8080:8080

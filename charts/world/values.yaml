@@ -1,0 +1,209 @@
+# Default values for world.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+nginx:
+  image:
+    # -- Repository of the docker image
+    repository: nginx
+    pullPolicy: IfNotPresent
+    # -- Overrides the image tag whose default is the chart appVersion.
+    tag: "1.25-alpine"
+
+  # -- Configurations variables and files
+  configs:
+    # -- Define the config list to be mounted at on nginx-server container
+    volumes:
+      []
+      # -- The name of the volume and suffix for the configmap
+      # - name: "extra-config"
+      #   # -- The path the volume will be mounted at on nginx-server container
+      #   mountPath: /etc/nginx/conf.d/
+      # # -- Files are stored in configmaps then mounted into the mountPath
+      #   files:
+      #     extra-config.conf: |
+      #       # CONTENT
+
+  # -- Persistence mount parameters
+  volumeMount:
+    {}
+    # -- The path the volume will be mounted at on httpServer container
+    # path: /data
+
+    # -- The subdirectory of the volume to mount on httpServer container
+    # Useful in dev environments and one PV for multiple services
+    # subPath: ""
+
+  # Optionally specify extra list of additional volumeMounts
+  extraVolumeMounts:
+  # - name: extra-volume
+  #   mountPath: /mnt/volume
+  #   readOnly: true
+
+  # -- Extra environment variables
+  extraEnv: []
+  # - name: MY_VAR
+  #   value: my_value
+
+  # -- Extra environment variables from secrets or configmaps
+  extraEnvFrom: []
+  # - configMapRef:
+  #     name: my-configmap
+
+  # -- Indicates whether the Container is running.
+  livenessProbe:
+    enabled: true
+    # -- Before enabling check the allow ip range
+    allowIPRange: "0.0.0.0/0"
+    path: /nginx_status
+
+  # -- Indicates whether the Container is ready
+  readinessProbe:
+    enabled: true
+    # -- Set probe path of the application
+    path: /
+
+replicaCount: 3
+
+image:
+  repository: world
+  tag: "1.0"
+  pullPolicy: IfNotPresent
+
+# Define root path for nginx server
+rootPath: /app/public
+
+# Set the path where static files are in the Docker image.
+# Contents will be copied from this directory to a volume,
+# shared between nginx-server and the php container.
+staticPath: ""
+
+livenessProbe:
+  enabled: true
+
+readinessProbe:
+  enabled: true
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  {}
+  # fsGroup: 2000
+
+securityContext:
+  {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  className: ""
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+  hosts:
+    - host: ornikar.dev
+      paths:
+        - path: /world
+          pathType: Prefix
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Persistence parameters
+# ref: https://kubernetes.io/docs/user-guide/persistent-volumes/
+persistence:
+  # Enable persistence on the application using Persistent Volume Claims
+  enabled: false
+
+  # Use a existing PVC which must be created manually before bound
+  existingClaim: ""
+
+  # Clone an existing PVC to create the PVC
+  cloneFromClaim: ""
+
+  # Persistent Volume storage class
+  # If defined, storageClassName: <storageClass>
+  # If set to "-", storageClassName: "", which disables dynamic provisioning
+  # If undefined (the default) or set to null, no storageClassName spec is set, choosing the default provisioner
+  storageClass: ""
+
+  # Persistent Volume access modes
+  accessModes:
+    - ReadWriteOnce
+
+  # Persistent Volume size
+  size: 8Gi
+
+  # Additional custom annotations for the PVC
+  annotations: {}
+
+# Configurations variables and files
+configs:
+  # Define the config list to be mounted at on application containers
+  volumes:
+    []
+    # The name of the volume and suffix for the configmap
+    # - name: "nginx"
+    #   # The path the volume will be mounted at on application containers
+    #   mountPath: /etc/nginx/conf.d/
+    # # Files are stored in configmaps then mounted into the mountPath
+    #   files:
+    #     nginx.conf: |
+    #       # CONTENT
+
+# Optionally specify extra list of additional volumes
+extraVolumes:
+  # - name: nginx-vol
+  #   emptyDir: {}
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

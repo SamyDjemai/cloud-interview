@@ -1,0 +1,225 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "world.fullname" . }}
+  labels:
+    {{- include "world.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "world.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "world.labels" . | nindent 8 }}
+	{{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "world.serviceAccountName" . }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+
+      {{- if .Values.staticPath }}
+      initContainers:
+        - name: copy-shared-static
+          securityContext:
+          {{- with .Values.securityContext }}
+            {{- toYaml . | nindent 12 -}}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion | default "latest" }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # Copy static files from the php image into a shared volume so that nginx can serve them
+          command:
+            - /bin/sh
+            - -c
+            - |
+              cp -ar {{ .Values.staticPath }} /shared
+          volumes:
+            - name: shared-static
+              mountPath: /shared
+              readOnly: false
+      {{- end }}
+
+      containers:
+        - name: nginx-server
+          securityContext:
+          {{- with .Values.securityContext }}
+            {{- toYaml . | nindent 12 -}}
+          {{- end }}
+          image: "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag | default .Chart.AppVersion | default "latest" }}"
+          imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          {{- with .Values.nginx.extraEnv }}
+          env:
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- with .Values.nginx.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+          volumeMounts:
+            # nginx needs to be able to write in those directories
+            - mountPath: /var/cache/nginx
+              subPath: cache-nginx
+              name: nginx-vol
+            - mountPath: /var/run
+              subPath: run
+              name: nginx-vol
+            # Load config
+            - name: config-nginx-server
+              mountPath: /etc/nginx/conf.d/
+              readOnly: true
+            # Mount staticPath
+            {{- if .Values.staticPath }}
+            - name: shared-static
+              mountPath: {{ .Values.staticPath }}
+              readOnly: true
+            {{- end }}
+            {{- range .Values.nginx.configs.volumes }}
+            - name: config-{{ .name }}
+              mountPath: {{ .mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.persistence.enabled }}
+            - name: persist-data
+              mountPath: {{ .Values.nginx.volumeMount.path }}
+              {{- if .Values.nginx.volumeMount.subPath }}
+              subPath: {{ .Values.nginx.volumeMount.subPath }}
+              {{- end }}
+            {{- end }}
+            {{- if .Values.nginx.extraVolumeMounts }}
+            {{ toYaml .Values.nginx.extraVolumeMounts | nindent 12 }}
+            {{- end }}
+
+          {{- if .Values.nginx.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.nginx.livenessProbe.path | default "/" }}
+              port: http
+          {{- end }}
+          {{- if .Values.nginx.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.nginx.readinessProbe.path | default "/" }}
+              port: http
+          {{- end }}
+
+        - name: php
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe:
+            exec:
+              command:
+              # We use https://github.com/renatomefi/php-fpm-healthcheck instead of an http probe
+              # because we want to check that php-fpm is running.
+              # We consider that if there are more than 10 processes waiting in the fpm queue,
+              # then the pod is not healthy.
+              - php-fpm-healthcheck
+              - --listen-queue=10
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            exec:
+              command:
+              # We only do a simple ping to php-fpm to check that it is running.
+              - php-fpm-healthcheck
+            initialDelaySeconds: 1
+            periodSeconds: 3
+          {{- end }}
+
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if or (.Values.staticPath) (.Values.extraVolumeMounts) (.Values.configs.volumes) (.Values.persistence.enabled) }}
+          volumeMounts:
+            # mount staticPath
+            {{- if .Values.staticPath }}
+            - name: shared-static
+              mountPath: {{ .Values.staticPath }}
+              readOnly: true
+            {{- end }}
+            {{- range .Values.configs.volumes }}
+            - name: config-{{ .name }}
+              mountPath: {{ .mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.persistence.enabled }}
+            - name: persist-data
+              mountPath: {{ .Values.volumeMount.path }}
+              {{- if .Values.volumeMount.subPath }}
+              subPath: {{ .Values.volumeMount.subPath }}
+              {{- end }}
+            {{- end }}
+            {{- if .Values.extraVolumeMounts }}
+            {{ toYaml .Values.extraVolumeMounts | nindent 12 }}
+            {{- end }}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      volumes:
+        - name: nginx-vol
+          emptyDir: {}
+        - name: shared-static
+          emptyDir: {}
+        - name: config-nginx-server
+          configMap:
+            name: "{{ include "world.fullname" $ }}-nginx-server"
+        {{- range .Values.nginx.configs.volumes }}
+        - name: config-{{ .name }}
+          configMap:
+            name: "{{ include "world.fullname" $ }}-{{ .name }}"
+        {{- end }}
+        {{- range .Values.configs.volumes }}
+        - name: config-{{ .name }}
+          configMap:
+            name: "{{ include "world.fullname" $ }}-{{ .name }}"
+        {{- end }}
+        {{- if .Values.persistence.enabled }}
+          {{- if .Values.persistence.existingClaim }}
+        - name: persist-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | quote }}
+          {{- else }}
+        - name: persist-data
+          persistentVolumeClaim:
+            claimName: {{ include "world.fullname" . }}
+          {{- end }}
+        {{- end }}
+        {{- if .Values.extraVolumes }}
+        {{- toYaml .Values.extraVolumes | nindent 8 }}
+        {{- end }}
