@@ -19,7 +19,7 @@ module "environment" {
     cluster_name        = "samyd-ornikar-prod"
     node_instance_types = ["t3.micro"]
     min_size            = 3
-    max_size            = 15
-    desired_size        = 9
+    max_size            = 9
+    desired_size        = 6
   }
 }
