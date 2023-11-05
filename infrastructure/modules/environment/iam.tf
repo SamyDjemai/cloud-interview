@@ -101,29 +101,26 @@ resource "aws_iam_policy" "eks_cluster_autoscaler" {
         {
           "Effect" : "Allow",
           "Action" : [
-            "autoscaling:SetDesiredCapacity",
-            "autoscaling:TerminateInstanceInAutoScalingGroup"
+            "autoscaling:DescribeAutoScalingGroups",
+            "autoscaling:DescribeAutoScalingInstances",
+            "autoscaling:DescribeLaunchConfigurations",
+            "autoscaling:DescribeScalingActivities",
+            "autoscaling:DescribeTags",
+            "ec2:DescribeInstanceTypes",
+            "ec2:DescribeLaunchTemplateVersions"
           ],
-          "Resource" : "*",
-          "Condition" : {
-            "StringEquals" : {
-              "aws:ResourceTag/k8s.io/cluster-autoscaler/enabled" : "true",
-              "aws:ResourceTag/k8s.io/cluster-autoscaler/${aws_eks_cluster.main.name}" : "owned"
-            }
-          }
+          "Resource" : ["*"]
         },
         {
           "Effect" : "Allow",
           "Action" : [
-            "autoscaling:DescribeAutoScalingInstances",
-            "autoscaling:DescribeAutoScalingGroups",
-            "autoscaling:DescribeScalingActivities",
-            "ec2:DescribeLaunchTemplateVersions",
-            "autoscaling:DescribeTags",
-            "autoscaling:DescribeLaunchConfigurations",
-            "ec2:DescribeInstanceTypes"
+            "autoscaling:SetDesiredCapacity",
+            "autoscaling:TerminateInstanceInAutoScalingGroup",
+            "ec2:DescribeImages",
+            "ec2:GetInstanceTypesFromInstanceRequirements",
+            "eks:DescribeNodegroup"
           ],
-          "Resource" : "*"
+          "Resource" : ["*"]
         }
       ]
     }

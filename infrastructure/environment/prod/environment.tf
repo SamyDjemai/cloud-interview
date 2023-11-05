@@ -18,8 +18,8 @@ module "environment" {
   eks = {
     cluster_name        = "samyd-ornikar-prod"
     node_instance_types = ["t3.micro"]
-    min_size            = 1
-    max_size            = 5
-    desired_size        = 3
+    min_size            = 3
+    max_size            = 15
+    desired_size        = 9
   }
 }
